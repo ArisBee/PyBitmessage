@@ -1,3 +1,5 @@
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FArisBee%2FPyBitmessage.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FArisBee%2FPyBitmessage?ref=badge_shield)
+
 PyBitmessage
 ============
 
@@ -28,3 +30,7 @@ References
 * [Discuss on Reddit](https://www.reddit.com/r/bitmessage)
 * [Chat on Gitter](https://gitter.im/Bitmessage/PyBitmessage)
 
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FArisBee%2FPyBitmessage.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FArisBee%2FPyBitmessage?ref=badge_large)
