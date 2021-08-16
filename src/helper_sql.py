@@ -16,12 +16,14 @@ SQLite objects can only be used from one thread.
    or isn't thread-safe.
 """
 
-import Queue
 import threading
 
-sqlSubmitQueue = Queue.Queue()
+from six.moves import queue
+
+
+sqlSubmitQueue = queue.Queue()
 """the queue for SQL"""
-sqlReturnQueue = Queue.Queue()
+sqlReturnQueue = queue.Queue()
 """the queue for results"""
 sql_lock = threading.Lock()
 """ lock to prevent queueing a new request until the previous response
@@ -105,11 +107,23 @@ def sqlExecute(sql_statement, *args):
     return rowcount
 
 
+def sqlExecuteScript(sql_statement):
+    """Execute SQL script statement"""
+
+    statements = sql_statement.split(";")
+    with SqlBulkExecute() as sql:
+        for q in statements:
+            sql.execute("{}".format(q))
+
+
 def sqlStoredProcedure(procName):
     """Schedule procName to be run"""
     assert sql_available
     sql_lock.acquire()
     sqlSubmitQueue.put(procName)
+    if procName == "exit":
+        sqlSubmitQueue.task_done()
+        sqlSubmitQueue.put("terminate")
     sql_lock.release()
 
 

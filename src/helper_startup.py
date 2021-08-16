@@ -10,11 +10,15 @@ import sys
 import time
 from distutils.version import StrictVersion
 
-import defaults
-import helper_random
-import paths
-import state
-from bmconfigparser import BMConfigParser
+try:
+    import defaults
+    import helper_random
+    import paths
+    import state
+    from bmconfigparser import BMConfigParser
+except ImportError:
+    from . import defaults, helper_random, paths, state
+    from .bmconfigparser import BMConfigParser
 
 try:
     from plugins.plugin import get_plugin
@@ -172,9 +176,9 @@ def updateConfig():
         # acts as a salt
         config.set(
             'bitmessagesettings', 'identiconsuffix', ''.join(
-                helper_random.randomchoice("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
-                for x in range(12)
-            )
+                helper_random.randomchoice(
+                    "123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+                    "abcdefghijkmnopqrstuvwxyz") for x in range(12))
         )  # a twelve character pseudo-password to salt the identicons
 
     # Add settings to support no longer resending messages after
@@ -241,14 +245,15 @@ def updateConfig():
             'bitmessagesettings', 'maxacceptablenoncetrialsperbyte') == 0:
         config.set(
             'bitmessagesettings', 'maxacceptablenoncetrialsperbyte',
-            str(defaults.ridiculousDifficulty *
-                defaults.networkDefaultProofOfWorkNonceTrialsPerByte)
+            str(defaults.ridiculousDifficulty
+                * defaults.networkDefaultProofOfWorkNonceTrialsPerByte)
         )
-    if config.safeGetInt('bitmessagesettings', 'maxacceptablepayloadlengthextrabytes') == 0:
+    if config.safeGetInt(
+            'bitmessagesettings', 'maxacceptablepayloadlengthextrabytes') == 0:
         config.set(
             'bitmessagesettings', 'maxacceptablepayloadlengthextrabytes',
-            str(defaults.ridiculousDifficulty *
-                defaults.networkDefaultPayloadLengthExtraBytes)
+            str(defaults.ridiculousDifficulty
+                * defaults.networkDefaultPayloadLengthExtraBytes)
         )
 
     if not config.has_option('bitmessagesettings', 'onionhostname'):
@@ -290,8 +295,8 @@ def adjustHalfOpenConnectionsLimit():
             # connections at a time.
             VER_THIS = StrictVersion(platform.version())
             is_limited = (
-                StrictVersion("5.1.2600") <= VER_THIS and
-                StrictVersion("6.0.6000") >= VER_THIS
+                StrictVersion("5.1.2600") <= VER_THIS
+                and StrictVersion("6.0.6000") >= VER_THIS
             )
     except ValueError:
         pass
@@ -315,7 +320,7 @@ def start_proxyconfig():
             logger.error(
                 'Failed to run proxy config plugin %s',
                 proxy_type, exc_info=True)
-            os._exit(0)  # pylint: disable=protected-access
+            config.setTemp('bitmessagesettings', 'dontconnect', 'true')
         else:
             logger.info(
                 'Started proxy config plugin %s in %s sec',

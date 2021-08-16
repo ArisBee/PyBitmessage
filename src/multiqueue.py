@@ -3,13 +3,17 @@ A queue with multiple internal subqueues.
 Elements are added into a random subqueue, and retrieval rotates
 """
 
-import Queue
 from collections import deque
 
-import helper_random
+from six.moves import queue
+
+try:
+    import helper_random
+except ImportError:
+    from . import helper_random
 
 
-class MultiQueue(Queue.Queue):
+class MultiQueue(queue.Queue):
     """A base queue class"""
     # pylint: disable=redefined-builtin,attribute-defined-outside-init
     defaultQueueCount = 10
@@ -19,7 +23,7 @@ class MultiQueue(Queue.Queue):
             self.queueCount = MultiQueue.defaultQueueCount
         else:
             self.queueCount = count
-        Queue.Queue.__init__(self, maxsize)
+        queue.Queue.__init__(self, maxsize)
 
     # Initialize the queue representation
     def _init(self, maxsize):
@@ -34,7 +38,8 @@ class MultiQueue(Queue.Queue):
     # Put a new item in the queue
     def _put(self, item):
         # self.queue.append(item)
-        self.queues[helper_random.randomrandrange(self.queueCount)].append((item))
+        self.queues[helper_random.randomrandrange(self.queueCount)].append(
+            (item))
 
     # Get an item from the queue
     def _get(self):

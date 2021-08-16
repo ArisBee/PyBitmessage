@@ -6,12 +6,11 @@ import base64
 import json
 import time
 
-try:  # nosec
-    from xmlrpclib import ServerProxy, ProtocolError
-except ImportError:
-    from xmlrpc.client import ServerProxy, ProtocolError
+from six.moves import xmlrpc_client  # nosec
 
-from .test_process import TestProcessProto, TestProcessShutdown
+import psutil
+
+from .test_process import TestProcessProto
 
 
 class TestAPIProto(TestProcessProto):
@@ -23,7 +22,7 @@ class TestAPIProto(TestProcessProto):
         """Setup XMLRPC proxy for pybitmessage API"""
         super(TestAPIProto, cls).setUpClass()
         cls.addresses = []
-        cls.api = ServerProxy(
+        cls.api = xmlrpc_client.ServerProxy(
             "http://username:password@127.0.0.1:8442/")
         for _ in range(5):
             if cls._get_readline('.api_started'):
@@ -31,18 +30,16 @@ class TestAPIProto(TestProcessProto):
             time.sleep(1)
 
 
-class TestAPIShutdown(TestAPIProto, TestProcessShutdown):
+class TestAPIShutdown(TestAPIProto):
     """Separate test case for API command 'shutdown'"""
     def test_shutdown(self):
         """Shutdown the pybitmessage"""
         self.assertEqual(self.api.shutdown(), 'done')
-        for _ in range(5):
-            if not self.process.is_running():
-                break
-            time.sleep(2)
-        else:
+        try:
+            self.process.wait(20)
+        except psutil.TimeoutExpired:
             self.fail(
-                '%s has not stopped in 10 sec' % ' '.join(self._process_cmd))
+                '%s has not stopped in 20 sec' % ' '.join(self._process_cmd))
 
 
 # TODO: uncovered API commands
@@ -58,6 +55,7 @@ class TestAPIShutdown(TestAPIProto, TestProcessShutdown):
 # getMessageDataByDestinationHash
 # statusBar
 
+
 class TestAPI(TestAPIProto):
     """Main API test case"""
     _seed = base64.encodestring(
@@ -69,8 +67,9 @@ class TestAPI(TestAPIProto):
 
     def test_user_password(self):
         """Trying to connect with wrong username/password"""
-        api_wrong = ServerProxy("http://test:wrong@127.0.0.1:8442/")
-        with self.assertRaises(ProtocolError):
+        api_wrong = xmlrpc_client.ServerProxy(
+            "http://test:wrong@127.0.0.1:8442/")
+        with self.assertRaises(xmlrpc_client.ProtocolError):
             api_wrong.clientStatus()
 
     def test_connection(self):
@@ -278,6 +277,7 @@ class TestAPI(TestAPIProto):
         msg = base64.encodestring('test broadcast')
         ackdata = self.api.sendBroadcast(
             addr, base64.encodestring('test_subject'), msg)
+
         try:
             int(ackdata, 16)
             status = self.api.getStatus(ackdata)
@@ -285,6 +285,15 @@ class TestAPI(TestAPIProto):
                 raise KeyError
             self.assertIn(status, (
                 'doingbroadcastpow', 'broadcastqueued', 'broadcastsent'))
+
+            start = time.time()
+            while status == 'doingbroadcastpow':
+                spent = int(time.time() - start)
+                if spent > 30:
+                    self.fail('PoW is taking too much time: %ss' % spent)
+                time.sleep(1)  # wait for PoW to get final msgid on next step
+                status = self.api.getStatus(ackdata)
+
             # Find the message and its ID in sent
             for m in json.loads(self.api.getAllSentMessages())['sentMessages']:
                 if m['ackData'] == ackdata:

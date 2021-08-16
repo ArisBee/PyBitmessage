@@ -15,7 +15,7 @@ function download_sources_32 {
 	fi
 	wget -P ${SRCPATH} -c -nc --content-disposition \
 		https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}.msi \
-		https://download.microsoft.com/download/1/1/1/1116b75a-9ec3-481a-a3c8-1777b5381140/vcredist_x86.exe \
+		https://web.archive.org/web/20210420044701/https://download.microsoft.com/download/1/1/1/1116b75a-9ec3-481a-a3c8-1777b5381140/vcredist_x86.exe \
 		https://github.com/Bitmessage/ThirdPartyLibraries/blob/master/PyQt${PYQT_VERSION}-x32.exe?raw=true \
 		https://github.com/Bitmessage/ThirdPartyLibraries/blob/master/Win32OpenSSL-${OPENSSL_VERSION}.exe?raw=true \
 		https://github.com/Bitmessage/ThirdPartyLibraries/blob/master/pyopencl-2015.1-cp27-none-win32.whl?raw=true
@@ -108,11 +108,12 @@ function install_pyinstaller()
 	fi
 }
 
-function install_msgpack()
+function install_pip_depends()
 {
 	cd "${BASE_DIR}" || exit 1
-	echo "Installing msgpack"
-	wine python -m pip install msgpack-python
+	echo "Installing pip depends"
+	wine python -m pip install msgpack-python .[qrcode] .[tor]
+	python setup.py egg_info
 }
 
 function install_pyopencl()
@@ -167,6 +168,14 @@ function build_exe(){
 	wine pyinstaller bitmessagemain.spec
 }
 
+function dryrun_exe(){
+       cd "${BASE_DIR}" || exit 1
+       if [ ! "${MACHINE_TYPE}" == 'x86_64' ]; then
+	   local VERSION=$(python setup.py --version)
+	   wine packages/pyinstaller/dist/Bitmessage_x86_$VERSION.exe -t
+       fi
+}
+
 # prepare on ubuntu
 # dpkg --add-architecture i386
 # apt update
@@ -183,7 +192,8 @@ install_python
 install_pyqt
 install_openssl
 install_pyopencl
-install_msgpack
+install_pip_depends
 install_pyinstaller
 build_dll
 build_exe
+dryrun_exe
